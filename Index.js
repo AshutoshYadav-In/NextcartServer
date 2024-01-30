@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const UserRoute = require("./Routes/User.js");
 const AdminRoute = require("./Routes/Admin.js");
 const cookieParser = require("cookie-parser");
+const axios = require("axios"); 
 dotenv.config();
 // Middleware setup
 app.use(cors());
@@ -27,6 +28,24 @@ mongoose
 app.listen(process.env.PORT,() => {
   console.log(`Server started on PORT ${process.env.PORT}`);
 });
+// Set up a timer to call the API every 12 minutes
+const apiCallInterval = 12 * 60 * 1000; // 12 minutes in milliseconds
+
+function makeApiCall() {
+  axios.get("https://nextcartserver.onrender.com/api/admin/products/all")
+    .then(response => {
+      console.log("API call successful:", response.data);
+    })
+    .catch(error => {
+      console.error("Error making API call:", error.message);
+    });
+}
+
+// Initial API call
+makeApiCall();
+
+// Set up the interval to make API calls every 12 minutes
+const apiCallTimer = setInterval(makeApiCall, apiCallInterval);
 //Global error middleware
 app.use((err, req, res, next) => {
   res.status(500).json({ message: "An error occurred"});
