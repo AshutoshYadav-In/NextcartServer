@@ -24,32 +24,39 @@ const registerUser = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "Please upload profile photo" });
     }
-
-    const cloudinaryUpload = await cloudinary.uploader.upload(req.file.path, {
-      folder: "Userimages",
+try{
+  const cloudinaryUpload = await cloudinary.uploader.upload(req.file.path, {
+    folder: "Userimages",
+  });
+  
+  if (cloudinaryUpload && cloudinaryUpload.secure_url) {
+    const imageUrl = cloudinaryUpload.secure_url;
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new usermodel({
+      username: name,
+      email,
+      password: hashedPassword,
+      address,
+      image: imageUrl,
+      role: "customer",
+      cart: [],
+      orders: [],
     });
 
-    if (cloudinaryUpload && cloudinaryUpload.secure_url) {
-      const imageUrl = cloudinaryUpload.secure_url;
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const newUser = new usermodel({
-        username: name,
-        email,
-        password: hashedPassword,
-        address,
-        image: imageUrl,
-        role: "customer",
-        cart: [],
-        orders: [],
-      });
-
-      await newUser.save();
-      return res.status(201).json({ message: "Registration Successful" });
-    } else {
-      return res
-        .status(500)
-        .json({ message: "Failed to Register, Try again later" });
-    }
+    await newUser.save();
+    return res.status(201).json({ message: "Registration Successful" });
+  } else {
+    return res
+      .status(500)
+      .json({ message: "Failed to Register, Try again later" });
+  }
+}catch(error){
+  if (error.message.includes("File size too large")) {
+   return res.status(400).send({ message: "File size too large, Max: 10Mb" });
+  }
+  return res.status(500).json({ message: "Internal Server Error" });
+}
+   
   } catch (error) {
     console.error("Error:", error);
     return res.status(500).json({ message: "Internal Server Error" });
