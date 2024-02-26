@@ -34,7 +34,7 @@ const apiCallInterval = 12 * 60 * 1000; // 12 minutes in milliseconds
 function makeApiCall() {
   axios.get("https://nextcartserver.onrender.com/api/admin/products/all")
     .then(response => {
-      console.log("API call successful:", response.data);
+      console.log("API call successful");
     })
     .catch(error => {
       console.error("Error making API call:", error.message);

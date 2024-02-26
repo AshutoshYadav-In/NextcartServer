@@ -4,7 +4,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const usermodel = require("../Models/Usermodel.js");
 const productmodel = require("../Models/Productmodel.js");
-const ordersmodel = require('../Models/Ordersmodel.js');
+const ordersmodel = require("../Models/Ordersmodel.js");
 const dotenv = require("dotenv");
 dotenv.config();
 //Registeruser Controller
@@ -24,39 +24,40 @@ const registerUser = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "Please upload profile photo" });
     }
-try{
-  const cloudinaryUpload = await cloudinary.uploader.upload(req.file.path, {
-    folder: "Userimages",
-  });
-  
-  if (cloudinaryUpload && cloudinaryUpload.secure_url) {
-    const imageUrl = cloudinaryUpload.secure_url;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new usermodel({
-      username: name,
-      email,
-      password: hashedPassword,
-      address,
-      image: imageUrl,
-      role: "customer",
-      cart: [],
-      orders: [],
-    });
+    try {
+      const cloudinaryUpload = await cloudinary.uploader.upload(req.file.path, {
+        folder: "Userimages",
+      });
 
-    await newUser.save();
-    return res.status(201).json({ message: "Registration Successful" });
-  } else {
-    return res
-      .status(500)
-      .json({ message: "Failed to Register, Try again later" });
-  }
-}catch(error){
-  if (error.message.includes("File size too large")) {
-   return res.status(400).send({ message: "File size too large, Max: 10Mb" });
-  }
-  return res.status(500).json({ message: "Internal Server Error" });
-}
-   
+      if (cloudinaryUpload && cloudinaryUpload.secure_url) {
+        const imageUrl = cloudinaryUpload.secure_url;
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = new usermodel({
+          username: name,
+          email,
+          password: hashedPassword,
+          address,
+          image: imageUrl,
+          role: "customer",
+          cart: [],
+          orders: [],
+        });
+
+        await newUser.save();
+        return res.status(201).json({ message: "Registration Successful" });
+      } else {
+        return res
+          .status(500)
+          .json({ message: "Failed to Register, Try again later" });
+      }
+    } catch (error) {
+      if (error.message.includes("File size too large")) {
+        return res
+          .status(400)
+          .send({ message: "File size too large, Max: 10Mb" });
+      }
+      return res.status(500).json({ message: "Internal Server Error" });
+    }
   } catch (error) {
     console.error("Error:", error);
     return res.status(500).json({ message: "Internal Server Error" });
@@ -107,7 +108,7 @@ const updateUser = async (req, res) => {
     // Find the user
     let userid = req.user.userId;
     let userID = req.params.id;
-    if(userid !== userID){
+    if (userid !== userID) {
       return res.status(403).json({ message: "Unauthorized access" });
     }
     const user = await usermodel.findById(userid);
@@ -131,7 +132,9 @@ const updateUser = async (req, res) => {
         user.image = cloudinaryUpload.secure_url;
       } catch (error) {
         if (error.message.includes("File size too large")) {
-          return res.status(400).send({ message: "File size too large, Max: 10Mb" });
+          return res
+            .status(400)
+            .send({ message: "File size too large, Max: 10Mb" });
         }
       }
     }
@@ -155,47 +158,49 @@ const updateUser = async (req, res) => {
   }
 };
 //delete user
-const deleteUser = async(req,res)=>{
+const deleteUser = async (req, res) => {
   try {
-  const userId = req.params.id;
-  const tokenUserID = req.user.userId;
-  const userRole = req.user.userRole;
-  if(userRole === "admin"){
-    return res.status(403).json({ message: "Cannot delete admin id" });
-  }
-  // Check if the user IDs match
-  if (userId !== tokenUserID) {
-    return res.status(403).json({ message: "Unauthorized access" });
-  }
-  await ordersmodel.deleteMany({ customer: userId });
-  // Assuming UserModel has a method called deleteById to delete a user by ID
-  const deletedUser = await usermodel.findByIdAndDelete(userId);
+    const userId = req.params.id;
+    const tokenUserID = req.user.userId;
+    const userRole = req.user.userRole;
+    if (userRole === "admin") {
+      return res.status(403).json({ message: "Cannot delete admin id" });
+    }
+    // Check if the user IDs match
+    if (userId !== tokenUserID) {
+      return res.status(403).json({ message: "Unauthorized access" });
+    }
+    await ordersmodel.deleteMany({ customer: userId });
+    // Assuming UserModel has a method called deleteById to delete a user by ID
+    const deletedUser = await usermodel.findByIdAndDelete(userId);
 
-  if (!deletedUser) {
-    return res.status(404).json({ message: "User not found" });
-  }
+    if (!deletedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     // Delete user's image from Cloudinary
     const oldImagePublicId = deletedUser.image.split("/").pop().split(".")[0];
     await cloudinary.uploader.destroy(`Userimages/${oldImagePublicId}`);
 
-  return res.status(200).json({ message: "User deleted successfully" });
-} catch (error) {
-  console.error(error);
-  return res.status(500).json({ message: "Internal server error" });
-}
-}
+    return res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 //cart add product
-const cartAddProduct = async(req,res)=>{
+const cartAddProduct = async (req, res) => {
   let productID = req.params.id;
   let userid = req.user.userId;
   const userRole = req.user.userRole;
-  if(userRole !==  "customer"){
-    return res.status(400).json({message: "Login from customer id"})
+  if (userRole !== "customer") {
+    return res.status(400).json({ message: "Login from customer id" });
   }
   try {
     const user = await usermodel.findById(userid);
-    const productIndex = user.cart.findIndex(item => item.product.toString() === productID);
+    const productIndex = user.cart.findIndex(
+      (item) => item.product.toString() === productID
+    );
 
     if (productIndex > -1) {
       user.cart[productIndex].quantity += 1;
@@ -204,37 +209,39 @@ const cartAddProduct = async(req,res)=>{
     }
 
     await user.save();
-    res.status(200).json({ message: 'Product added to cart successfully.' });
+    res.status(200).json({ message: "Product added to cart successfully." });
   } catch (error) {
-    res.status(500).json({ message: 'An error occurred while adding product to cart.' });
+    res
+      .status(500)
+      .json({ message: "An error occurred while adding product to cart." });
   }
-}
+};
 //get user cart
-const getCartProducts = async(req,res)=>{
+const getCartProducts = async (req, res) => {
   let userid = req.user.userId;
   const userRole = req.user.userRole;
-  if(userRole !==  "customer"){
-    return res.status(400).json({message: "Login from customer id"})
+  if (userRole !== "customer") {
+    return res.status(400).json({ message: "Login from customer id" });
   }
   try {
-    const user = await usermodel.findById(userid).populate('cart.product');
+    const user = await usermodel.findById(userid).populate("cart.product");
     let totalPrice = 0;
-    user.cart.forEach(item => {
+    user.cart.forEach((item) => {
       totalPrice += item.product.price * item.quantity;
     });
-    res.status(200).json({cart: user.cart, totalPrice: totalPrice});
+    res.status(200).json({ cart: user.cart, totalPrice: totalPrice });
   } catch (error) {
-    res.status(500).json({ error: 'An error occurred while fetching cart.' });
+    res.status(500).json({ error: "An error occurred while fetching cart." });
   }
-}
+};
 //update user cart
-const updateUserCart = async(req,res)=>{
+const updateUserCart = async (req, res) => {
   let userid = req.user.userId;
-  let productId = req.params.id
+  let productId = req.params.id;
   let operationType = req.params.type;
   const userRole = req.user.userRole;
-  if(userRole !==  "customer"){
-    return res.status(400).json({message: "Login from customer id"})
+  if (userRole !== "customer") {
+    return res.status(400).json({ message: "Login from customer id" });
   }
   try {
     const user = await usermodel.findById(userid);
@@ -246,51 +253,53 @@ const updateUserCart = async(req,res)=>{
 
     // If the product is not in the cart, return an error
     if (productIndex === -1) {
-      return res.status(404).json({ error: 'Product not found in the cart.' });
+      return res.status(404).json({ error: "Product not found in the cart." });
     }
     // If the operation type is 'add', increase the quantity by 1
-    if (operationType === 'add') {
+    if (operationType === "add") {
       user.cart[productIndex].quantity += 1;
     }
     // If the operation type is 'subtract' and quantity is greater than 1, decrease by 1
-    else if (operationType === 'subtract') {
+    else if (operationType === "subtract") {
       if (user.cart[productIndex].quantity > 1) {
         user.cart[productIndex].quantity -= 1;
       } else {
         user.cart.splice(productIndex, 1);
       }
     } else {
-      return res.status(400).json({ message: 'Invalid operation type.' });
+      return res.status(400).json({ message: "Invalid operation type." });
     }
     // Save the updated user object
     await user.save();
 
-    res.status(200).json({message: 'Quantity updated successfully'});
+    res.status(200).json({ message: "Quantity updated successfully" });
   } catch (error) {
-    res.status(500).json({ message: 'An error occurred while updating the cart.' });
+    res
+      .status(500)
+      .json({ message: "An error occurred while updating the cart." });
   }
-}
+};
 //delete Product from cart
-const deleteProductFromCart = async(req,res)=>{
+const deleteProductFromCart = async (req, res) => {
   let userid = req.user.userId;
   let productId = req.params.id;
   const userRole = req.user.userRole;
-  if(userRole !==  "customer"){
-    return res.status(400).json({message: "Login from customer id"})
+  if (userRole !== "customer") {
+    return res.status(400).json({ message: "Login from customer id" });
   }
-  if(productId == "all"){
- // Update the user's cart by removing all products
- const updatedUser = await usermodel.findByIdAndUpdate(
-  userid,
-  { $set: { cart: [] } },
-  { new: true }
-);
+  if (productId == "all") {
+    // Update the user's cart by removing all products
+    const updatedUser = await usermodel.findByIdAndUpdate(
+      userid,
+      { $set: { cart: [] } },
+      { new: true }
+    );
 
-if (!updatedUser) {
-  return res.status(404).json({ message: 'User not found' });
-}
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-return res.status(200).json({ message: 'All products removed from cart' });
+    return res.status(200).json({ message: "All products removed from cart" });
   }
   try {
     // Update the user's cart by removing the specified product
@@ -300,18 +309,17 @@ return res.status(200).json({ message: 'All products removed from cart' });
       { new: true }
     );
     if (!updatedUser) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    return res.status(200).json({ message: 'Product removed from cart'});
+    return res.status(200).json({ message: "Product removed from cart" });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
-
-}
+};
 //get numberofitems
-const getNumberofItems = async(req,res)=>{
+const getNumberofItems = async (req, res) => {
   try {
     const userid = req.user.userId;
 
@@ -319,26 +327,29 @@ const getNumberofItems = async(req,res)=>{
     const user = await usermodel.findById(userid);
 
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
     // Calculate the total number of items in the cart
-    const numberOfItems = user.cart.reduce((total, item) => total + item.quantity, 0);
+    const numberOfItems = user.cart.reduce(
+      (total, item) => total + item.quantity,
+      0
+    );
 
     return res.status(200).json({ numberOfItems });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
-}
-//register orders 
-const registerOrders = async(req,res)=>{
+};
+//register orders
+const registerOrders = async (req, res) => {
   try {
     const userid = req.user.userId;
 
     // Find the user with the given userId
     const user = await usermodel.findById(userid);
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
     // Loop through each product in the user's cart
     for (let item of user.cart) {
@@ -366,44 +377,46 @@ const registerOrders = async(req,res)=>{
     // Save the user
     await user.save();
 
-    res.status(201).json({ message: 'Order created successfully' });
+    res.status(201).json({ message: "Order created successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'An error occurred while creating the order' });
+    res
+      .status(500)
+      .json({ message: "An error occurred while creating the order" });
   }
-}
-//get user orders 
-const getUserOrders = async(req,res)=>{
+};
+//get user orders
+const getUserOrders = async (req, res) => {
   const userid = req.user.userId;
   try {
-    const user = await usermodel.findById(userid)
-      .populate('orders.product');
-      
+    const user = await usermodel.findById(userid).populate("orders.product");
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
-    
+
     return res.status(200).json(user.orders);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: "Server error" });
   }
-}
+};
 //get search items
-const getSearchedItems = async(req,res)=>{
+const getSearchedItems = async (req, res) => {
   const item = req.params.itemname;
-  try{
-    const matchingProducts = await productmodel.find({ title: { $regex: new RegExp(item, 'i') } })
-    .limit(10)
-    .exec();
-    if(!matchingProducts) {
-      res.status(200).json({message: "no products found"});
+  try {
+    const matchingProducts = await productmodel
+      .find({ title: { $regex: new RegExp(item, "i") } })
+      .limit(10)
+      .exec();
+    if (!matchingProducts) {
+      res.status(200).json({ message: "no products found" });
     }
-  res.status(200).json(matchingProducts);
-  }catch(error){
-    res.status(500).json({ error: 'Internal Server Error' });
+    res.status(200).json(matchingProducts);
+  } catch (error) {
+    res.status(500).json({ error: "Internal Server Error" });
   }
-}
+};
 module.exports = {
   registerUser,
   loginUser,
@@ -412,9 +425,9 @@ module.exports = {
   cartAddProduct,
   getCartProducts,
   updateUserCart,
-deleteProductFromCart,
-getNumberofItems,
-registerOrders,
-getUserOrders,
-getSearchedItems
+  deleteProductFromCart,
+  getNumberofItems,
+  registerOrders,
+  getUserOrders,
+  getSearchedItems,
 };
