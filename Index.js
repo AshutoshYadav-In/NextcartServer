@@ -32,7 +32,7 @@ app.listen(process.env.PORT,() => {
 const apiCallInterval = 12 * 60 * 1000; // 12 minutes in milliseconds
 
 function makeApiCall() {
-  axios.get("https://nextcartserver.onrender.com/api/admin/products/all")
+  axios.get("https://nextcartserver-it17.onrender.com/api/admin/products/all")
     .then(response => {
       console.log("API call successful");
     })
